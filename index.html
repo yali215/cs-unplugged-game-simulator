@@ -1,0 +1,1903 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>邏輯與空間決策智慧遊戲卡盒 ╳ 數位化桌上型教具系統</title>
+  <!-- CDN Links for Frameworks and Icons -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;700&family=Fira+Code:wght@400;500&display=swap">
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'Space Grotesk', 'system-ui', 'sans-serif'],
+            mono: ['Fira Code', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+  
+  <style>
+    /* Styling overrides or specialized transitions */
+    .wood-grain {
+      background: radial-gradient(ellipse at center, #2e1d0c 0%, #170d05 100%);
+    }
+    .chalkboard {
+      background: radial-gradient(circle at center, #1e2d24 0%, #0c1510 100%);
+    }
+    .grid-bg {
+      background-size: 16px 16px;
+      background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px);
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.4);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(100, 116, 139, 0.5);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(148, 163, 184, 0.8);
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 flex flex-col min-h-screen selection:bg-cyan-500 selection:text-slate-950 grid-bg">
+
+  <!-- ==================== MAIN SHELL (REACTION EMBED) ==================== -->
+  <div id="app-container" class="flex-1 flex flex-col justify-between w-full">
+    <!-- Dynamic Screens injected here via JavaScript state router -->
+  </div>
+
+  <!-- ==================== MODULE DESCRIPTIONS INSTRUCTIONS DIALOG ==================== -->
+  <div id="instruction-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl">
+      <div class="p-6 border-b border-slate-800 flex justify-between items-center">
+        <div>
+          <span id="modal-category" class="bg-cyan-955 text-cyan-400 border border-cyan-900 text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wide">-</span>
+          <h3 id="modal-game-name" class="text-base font-bold text-white mt-1.5 font-sans">-</h3>
+        </div>
+        <button onclick="closeModal()" class="text-slate-400 hover:text-white p-2 hover:bg-slate-800 rounded-xl transition cursor-pointer">✕</button>
+      </div>
+      <div class="p-6 space-y-4">
+        <p id="modal-description" class="text-xs text-slate-400 leading-relaxed font-sans">-</p>
+        <div class="space-y-2.5">
+          <p class="text-xs font-bold text-white uppercase tracking-wider font-mono">🚀 遊戲對應與實體操作指南 Checklist</p>
+          <div id="modal-steps" class="space-y-2">
+            <!-- Dynamic Instruction Items -->
+          </div>
+        </div>
+      </div>
+      <div class="p-6 bg-slate-950/60 border-t border-slate-800/80 flex justify-end">
+        <button onclick="closeModal()" class="px-5 py-2.5 bg-gradient-to-tr from-cyan-600 to-cyan-500 hover:opacity-90 active:scale-95 text-xs text-white font-bold rounded-xl shadow-lg cursor-pointer transition">
+          我知道了，進入挑戰！
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="border-t border-slate-900 bg-slate-950 py-3 text-center text-[10px] tracking-wider text-slate-500 font-mono">
+    © 2026 邏輯與空間決策智慧遊戲盒 ╳ 數位化桌上型教具系統 (Standalone Single HTML Version)
+  </footer>
+
+  <!-- ==================== CORE STATE CONTROLLER (VANILLA JS PORT) ==================== -->
+  <script>
+    // Seeding mock databases identical to React components
+    const SEED_PROFILES = [
+      { id: 'u-1', name: '陳阿強 (小霸王)', avatar: '🦁', binaryHighScore: 15, sortingHighScore: 50, gridHighScore: 250, totalAccumulatedScore: 315 },
+      { id: 'u-2', name: '林大明 (邏輯大師)', avatar: '🦊', binaryHighScore: 14, sortingHighScore: 40, gridHighScore: 200, totalAccumulatedScore: 254 },
+      { id: 'u-3', name: '張小花 (算法精靈)', avatar: '🐹', binaryHighScore: 18, sortingHighScore: 30, gridHighScore: 150, totalAccumulatedScore: 198 },
+      { id: 'u-4', name: '李小美 (空間旅人)', avatar: '🐰', binaryHighScore: 10, sortingHighScore: 20, gridHighScore: 100, totalAccumulatedScore: 130 },
+      { id: 'u-5', name: '王小明 (玩桌遊)', avatar: '🐱', binaryHighScore: 5, sortingHighScore: 10, gridHighScore: 50, totalAccumulatedScore: 65 }
+    ];
+
+    const SEED_RECORDS = [
+      { id: 'r-1', userId: 'u-1', userName: '陳阿強 (小霸王)', gameType: 'GRID', score: 50, date: '2026-06-11 10:15', details: '花費 42秒，12步精準奪星' },
+      { id: 'r-2', userId: 'u-2', userName: '林大明 (邏輯大師)', gameType: 'BINARY', score: 10, date: '2026-06-11 11:02', details: '解碼正確 10 個字元' },
+      { id: 'r-3', userId: 'u-3', userName: '張小花 (算法精靈)', gameType: 'SORTING', score: 10, date: '2026-06-11 11:45', details: '用 5 次秤重配比順利排卡' }
+    ];
+
+    const AVATAR_OPTIONS = ['🦁', '🦊', '🐹', '🐰', '🐱', '🐶', '🐻', '🐼', '🐨', '🐸', '🦄', '🐝', '🦖', '🐙'];
+
+    // STATE IN MEMORY
+    let state = {
+      currentModule: 'HOME', // 'HOME', 'BINARY', 'SORTING', 'GRID'
+      profiles: [],
+      records: [],
+      activeProfileId: 'u-5',
+      showCreator: false,
+      newProfileName: '',
+      selectedAvatar: '🐯',
+      dashboardTab: 'LEADERBOARD', // 'LEADERBOARD' or 'HISTORY'
+      leaderboardScope: 'TOTAL', // 'TOTAL', 'BINARY', 'SORTING', 'GRID'
+      historyFilter: 'ALL' // 'ALL', 'BINARY', 'SORTING', 'GRID'
+    };
+
+    // Sub-Games States
+    let binaryState = {
+      timeLeft: 60,
+      score: 0,
+      isPlaying: false,
+      hasStarted: false,
+      playerBits: ['0', '0', '0', '0', '0'], // [16, 8, 4, 2, 1]
+      targetNum: 1,
+      feedbackMsg: '請翻出與密碼卡指定的十進位相同的卡牌組合！',
+      matchSuccess: false,
+      timerInterval: null
+    };
+
+    const SORTING_SYMBOLS = ['✦', '❖', '▲', '●', '■'];
+    const SORTING_COLORS = [
+      'bg-stone-600 border-stone-500 text-amber-100',
+      'bg-slate-600 border-slate-500 text-cyan-100',
+      'bg-slate-700 border-slate-600 text-emerald-100',
+      'bg-zinc-700 border-zinc-650 text-rose-150',
+      'bg-neutral-800 border-neutral-700 text-purple-100'
+    ];
+
+    let sortingState = {
+      weights: [], // array of { id, symbol, actualWeight, color }
+      leftPan: null,
+      rightPan: null,
+      scaleAngle: 0,
+      logs: [],
+      recipeSide: 'BUBBLE',
+      answerSlots: Array(5).fill(null),
+      gameFeedback: { status: 'IDLE', msg: '請使用左邊的天秤，量測砝碼的輕重，並利用演算法規則由小到大排序！' },
+      score: 0,
+      attempts: 0
+    };
+
+    const GRID_SIZE = 6;
+    const COMMAND_LIBRARY = [
+      { type: 'FORWARD', label: '前進一步', cppCode: 'moveForward();', isFlipped: false },
+      { type: 'TURN_L', label: '左轉 90°', cppCode: 'turnLeft();', isFlipped: false },
+      { type: 'TURN_R', label: '右轉 90°', cppCode: 'turnRight();', isFlipped: false },
+      { type: 'IF_OBSTACLE', label: '如果遇到障礙物 ➔ 則右轉', cppCode: 'if(isObstacleAhead()) {\n  turnRight();\n}', isFlipped: false },
+      { type: 'REPEAT_3', label: '重複 3 次 ➔ 則前進', cppCode: 'for(int i = 0; i < 3; i++) {\n  moveForward();\n}', isFlipped: false }
+    ];
+
+    let gridState = {
+      grid: [], // 6x6 list
+      robot: { x: 0, y: 0, dir: 'RIGHT' },
+      initialRobot: { x: 0, y: 0, dir: 'RIGHT' },
+      library: [], 
+      commandSequence: [],
+      isExecuting: false,
+      currentStepIdx: null,
+      executionLog: '程式靜止。組織指令集，通關尋找金色星星吧！',
+      exStatus: 'IDLE',
+      seconds: 0,
+      movesCount: 0,
+      score: 0,
+      gameTimerRef: null
+    };
+
+    // INIT STATE ON DOM LOADED
+    window.addEventListener('DOMContentLoaded', () => {
+      // Load LocalStorage
+      const savedProfiles = localStorage.getItem('game_profiles');
+      const savedRecords = localStorage.getItem('game_records');
+      const savedActiveId = localStorage.getItem('active_profile_id');
+
+      if (savedProfiles) state.profiles = JSON.parse(savedProfiles);
+      else {
+        state.profiles = [...SEED_PROFILES];
+        localStorage.setItem('game_profiles', JSON.stringify(state.profiles));
+      }
+
+      if (savedRecords) state.records = JSON.parse(savedRecords);
+      else {
+        state.records = [...SEED_RECORDS];
+        localStorage.setItem('game_records', JSON.stringify(state.records));
+      }
+
+      if (savedActiveId && state.profiles.some(p => p.id === savedActiveId)) {
+        state.activeProfileId = savedActiveId;
+      } else {
+        state.activeProfileId = 'u-5';
+      }
+
+      render();
+    });
+
+    // MASTER RENDERING ROUTER
+    function render() {
+      const container = document.getElementById('app-container');
+      const activeUser = state.profiles.find(p => p.id === state.activeProfileId) || state.profiles[0];
+
+      // 1. DYNAMIC HEADER FRAME FOR BOTH HOME & MODULE BOARDS
+      let html = `
+        <header class="border-b border-slate-900 bg-slate-900/40 backdrop-blur-md sticky top-0 z-10 p-5">
+          <div class="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+            
+            <!-- Title Badge clickable to Home -->
+            <div onclick="navigate('HOME')" class="flex items-center gap-3 cursor-pointer select-none">
+              <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-600 to-amber-400 flex items-center justify-center text-amber-955 shadow-lg shadow-amber-500/10">
+                <i data-lucide="brain" class="w-5 h-5 animate-pulse"></i>
+              </div>
+              <div>
+                <h1 class="text-xl font-black tracking-tight text-white font-sans">
+                  邏輯與空間決策智慧遊戲盒
+                </h1>
+                <p class="text-[10px] text-amber-400 font-mono font-bold leading-none tracking-wider mt-0.5">
+                  BOARD GAME SYSTEM v5.0
+                </p>
+              </div>
+            </div>
+
+            <!-- Profile Badge dropdown switcher -->
+            <div class="flex items-center gap-3 flex-wrap">
+              <div class="bg-slate-900 border border-slate-800 rounded-2xl p-2 px-3 flex items-center gap-3 shadow-inner">
+                <div class="text-3xl select-none">${activeUser.avatar}</div>
+                <div class="text-left">
+                  <div class="text-[10px] text-slate-500 font-bold uppercase tracking-wider font-mono">當前遊戲帳號</div>
+                  <div class="text-xs font-bold text-white flex items-center gap-1.5 flex-wrap">
+                    ${activeUser.name}
+                    <span class="bg-cyan-900/50 text-cyan-400 border border-cyan-800/50 px-1.5 py-0.5 rounded text-[10px] uppercase">
+                      ★ ${activeUser.totalAccumulatedScore} pt
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <select onchange="switchProfile(this.value)" class="bg-slate-900 text-slate-200 border border-slate-800 p-2 text-xs rounded-xl cursor-pointer hover:border-slate-750 outline-none font-bold">
+                  ${state.profiles.map(p => `
+                    <option value="${p.id}" ${p.id === state.activeProfileId ? 'selected' : ''}>
+                      ${p.avatar} ${p.name} (${p.totalAccumulatedScore} pt)
+                    </option>
+                  `).join('')}
+                </select>
+
+                <button onclick="toggleProfileCreator(true)" class="p-2 bg-gradient-to-tr from-cyan-600 to-cyan-500 hover:opacity-90 rounded-xl text-xs font-bold font-mono text-white flex items-center gap-1 cursor-pointer transition shadow-sm">
+                  <i data-lucide="user-plus" class="w-4 h-4"></i> 新增角色
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </header>
+
+        <!-- New custom account creator panel drawer -->
+        <div id="creator-drawer" class="${state.showCreator ? '' : 'hidden'} bg-slate-900 border-b border-cyan-900/40 p-6 shadow-2xl relative">
+          <form onsubmit="handleCreateProfile(event)" class="max-w-2xl mx-auto flex flex-col gap-4">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+              <h3 class="text-sm font-bold text-cyan-400 flex items-center gap-1.5 font-mono">
+                ✨ 註冊全新探索帳號 Profile Center
+              </h3>
+              <button type="button" onclick="toggleProfileCreator(false)" class="text-xs text-slate-400 hover:text-white">關閉</button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+              <div class="space-y-1.5">
+                <label class="block text-xs text-slate-400 font-bold">自訂使用者名稱 Account Name:</label>
+                <input id="new-profile-name" type="text" placeholder="例如: 橘子熊程式大師" required maxLength="12" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white focus:border-cyan-500/50 outline-none">
+              </div>
+
+              <div class="space-y-1.5">
+                <label class="block text-xs text-slate-400 font-bold">選擇您的吉祥物頭像 Mascot:</label>
+                <div class="flex flex-wrap gap-1.5 bg-slate-955 p-2.5 rounded-xl border border-slate-800 overflow-y-auto max-h-[70px]">
+                  ${AVATAR_OPTIONS.map(av => `
+                    <button type="button" onclick="selectAvatarOption('${av}')" class="avatar-select-btn text-xl p-1 rounded-md transition ${state.selectedAvatar === av ? 'bg-cyan-500/20 border-2 border-cyan-500' : 'hover:bg-slate-900 border border-transparent'}">
+                      ${av}
+                    </button>
+                  `).join('')}
+                </div>
+              </div>
+            </div>
+
+            <div class="flex justify-end gap-2 mt-2">
+              <button type="button" onclick="toggleProfileCreator(false)" class="px-4 py-2 bg-slate-800 hover:bg-slate-750 font-bold rounded-xl text-xs transition">取消</button>
+              <button type="submit" class="px-5 py-2 bg-cyan-600 hover:bg-cyan-500 font-bold text-cyan-50 rounded-xl text-xs shadow-md transition">建立並自動切換</button>
+            </div>
+          </form>
+        </div>
+      `;
+
+      // 2. MAIN SUB-SCREEN ROUTER
+      if (state.currentModule === 'HOME') {
+        html += renderHomeScreen(activeUser);
+      } else if (state.currentModule === 'BINARY') {
+        html += renderBinaryScreen(activeUser);
+      } else if (state.currentModule === 'SORTING') {
+        html += renderSortingScreen(activeUser);
+      } else if (state.currentModule === 'GRID') {
+        html += renderGridScreen(activeUser);
+      }
+
+      container.innerHTML = html;
+      lucide.createIcons();
+    }
+
+    // ==================== SCREEN RENDERING: HOME PAGE ====================
+    function renderHomeScreen(activeUser) {
+      return `
+        <main class="flex-1 max-w-6xl w-full mx-auto p-4 md:p-8 flex flex-col justify-start items-center">
+          
+          <!-- Introduction Banner -->
+          <div class="text-center max-w-xl mb-8 space-y-3">
+            <span class="px-3 py-1 text-[10px] bg-amber-900/40 text-amber-400 border border-amber-900 rounded-full font-bold uppercase tracking-wider">
+              三大模組科技桌遊 ╳ 多角色登載
+            </span>
+            <h2 class="text-2xl md:text-3.5xl font-extrabold tracking-tight text-white leading-tight font-sans">
+              用觸感解鎖抽象思維
+            </h2>
+            <p class="text-sm text-slate-400 font-sans leading-relaxed">
+              將軟體科學中的「二進位編碼」、「排序演算法」與「自訂控制迴圈陣列」精煉為趣味操作。每位註冊玩家都可以獲得專屬紀錄、加總積分並登上總計對戰榜！
+            </p>
+          </div>
+
+          <!-- BENTO MODULE CARDS -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 w-full items-stretch mb-10">
+            
+            <!-- MODULE 1: Binary Game -->
+            <div class="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 flex flex-col justify-between shadow-xl relative overflow-hidden group hover:border-cyan-500/30 transition-colors">
+              <div>
+                <div class="flex items-center justify-between mb-5">
+                  <span class="p-2.5 bg-cyan-955 text-cyan-405 rounded-2xl border border-cyan-800/50">
+                    <i data-lucide="cpu" class="w-5 h-5"></i>
+                  </span>
+                  <span class="text-[10px] font-bold font-mono tracking-widest text-cyan-400 bg-cyan-950/45 border border-cyan-800 px-2.5 py-0.5 rounded-full uppercase font-black">
+                    基礎邏輯
+                  </span>
+                </div>
+                <div class="space-y-2">
+                  <h3 class="text-base font-bold text-white font-sans">
+                    【二進位翻牌解碼器】
+                  </h3>
+                  <p class="text-xs text-slate-400 font-sans leading-relaxed">
+                    一格一格翻動硬卡盤，對照 A4 欄位黑白代碼。利用「位元權重」開關，解碼正確字組累積單局積分！
+                  </p>
+                </div>
+                <div class="flex justify-between items-center mt-5 p-2 bg-slate-950/50 rounded-xl border border-slate-850">
+                  <span class="text-[10px] text-slate-500 font-bold">當前角色最高分:</span>
+                  <span class="text-xs font-bold text-cyan-400">${activeUser.binaryHighScore} 分</span>
+                </div>
+              </div>
+              <button onclick="navigate('BINARY')" class="mt-6 py-3 bg-cyan-600 hover:bg-cyan-500 text-cyan-50 hover:text-white font-bold rounded-2xl text-xs flex items-center justify-center gap-1 shadow-lg transform active:scale-95 transition-all cursor-pointer">
+                進入解碼器 <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+
+            <!-- MODULE 2: Sorting Game -->
+            <div class="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 flex flex-col justify-between shadow-xl relative overflow-hidden group hover:border-emerald-500/30 transition-colors">
+              <div>
+                <div class="flex items-center justify-between mb-5">
+                  <span class="p-2.5 bg-emerald-950 text-emerald-400 rounded-2xl border border-emerald-800/50">
+                    <i data-lucide="layers" class="w-5 h-5"></i>
+                  </span>
+                  <span class="text-[10px] font-bold font-mono tracking-widest text-emerald-400 bg-emerald-950/45 border border-emerald-900 px-2.5 py-0.5 rounded-full uppercase font-black">
+                    演算法模組
+                  </span>
+                </div>
+                <div class="space-y-2">
+                  <h3 class="text-base font-bold text-white font-sans">
+                    【天秤與幾何排序塔】
+                  </h3>
+                  <p class="text-xs text-slate-400 font-sans leading-relaxed">
+                    使用木質天秤兩兩比較砝碼記錄黑板。完成配比與排序點按送出，獲取星星能量積分！
+                  </p>
+                </div>
+                <div class="flex justify-between items-center mt-5 p-2 bg-slate-950/50 rounded-xl border border-slate-850">
+                  <span class="text-[10px] text-slate-500 font-bold">當前角色最高分:</span>
+                  <span class="text-xs font-bold text-emerald-400">${activeUser.sortingHighScore} 分</span>
+                </div>
+              </div>
+              <button onclick="navigate('SORTING')" class="mt-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-emerald-50 hover:text-white font-bold rounded-2xl text-xs flex items-center justify-center gap-1 shadow-lg transform active:scale-95 transition-all cursor-pointer">
+                進入幾何排序塔 <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+
+            <!-- MODULE 3: Grid Game -->
+            <div class="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 flex flex-col justify-between shadow-xl relative overflow-hidden group hover:border-amber-500/30 transition-colors">
+              <div>
+                <div class="flex items-center justify-between mb-5">
+                  <span class="p-2.5 bg-amber-950 text-amber-400 rounded-2xl border border-amber-900/50">
+                    <i data-lucide="compass" class="w-5 h-5"></i>
+                  </span>
+                  <span class="text-[10px] font-bold font-mono tracking-widest text-amber-400 bg-amber-955 border border-amber-900 px-2.5 py-0.5 rounded-full uppercase font-black">
+                    空間決策
+                  </span>
+                </div>
+                <div class="space-y-2">
+                  <h3 class="text-base font-bold text-white font-sans">
+                    【大地指令程式設計】
+                  </h3>
+                  <p class="text-xs text-slate-400 font-sans leading-relaxed">
+                    編譯If-Else、重複迴圈等語法指令。成功操縱無人漫遊車安全取得星星得 50 pt 大獎！
+                  </p>
+                </div>
+                <div class="flex justify-between items-center mt-5 p-2 bg-slate-950/50 rounded-xl border border-slate-850">
+                  <span class="text-[10px] text-slate-500 font-bold">當前角色最高分:</span>
+                  <span class="text-xs font-bold text-amber-400">${activeUser.gridHighScore} 分</span>
+                </div>
+              </div>
+              <button onclick="navigate('GRID')" class="mt-6 py-3 bg-amber-600 hover:bg-amber-500 text-amber-50 hover:text-white font-bold rounded-2xl text-xs flex items-center justify-center gap-1 shadow-lg transform active:scale-95 transition-all cursor-pointer">
+                進入指令程式盤 <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+
+          </div>
+
+          <!-- STATISTICS, LEADERBOARD, AND HISTORY CONSOLE -->
+          <div class="w-full bg-slate-900/40 rounded-3xl border border-slate-800 p-6 md:p-8 shadow-inner select-none relative">
+            
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-6 mb-6 border-b border-slate-800 gap-4">
+              <div class="flex items-center gap-2">
+                <button onclick="switchDashboardTab('LEADERBOARD')" class="px-4 py-2 rounded-xl text-xs font-bold font-sans flex items-center gap-1.5 cursor-pointer transition-all ${state.dashboardTab === 'LEADERBOARD' ? 'bg-amber-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'}">
+                  <i data-lucide="trophy" class="w-3.5 h-3.5"></i> 🏆 玩家總積分榮譽榜
+                </button>
+                <button onclick="switchDashboardTab('HISTORY')" class="px-4 py-2 rounded-xl text-xs font-bold font-sans flex items-center gap-1.5 cursor-pointer transition-all ${state.dashboardTab === 'HISTORY' ? 'bg-cyan-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'}">
+                  <i data-lucide="history" class="w-3.5 h-3.5"></i> 📜 智慧對戰履歷紀錄
+                </button>
+              </div>
+
+              <!-- Filter Tabs depending on active console type -->
+              <div>
+                ${state.dashboardTab === 'LEADERBOARD' ? `
+                  <div class="flex flex-wrap gap-1 bg-slate-950 p-1 rounded-xl border border-slate-850">
+                    <button onclick="switchLeaderboardScope('TOTAL')" class="px-2.5 py-1 rounded-lg text-[10.5px] font-mono cursor-pointer transition ${state.leaderboardScope === 'TOTAL' ? 'bg-amber-955 text-amber-300 font-black' : 'text-slate-500 hover:text-slate-300'} font-bold">🌐 總榜</button>
+                    <button onclick="switchLeaderboardScope('BINARY')" class="px-2.5 py-1 rounded-lg text-[10.5px] font-mono cursor-pointer transition ${state.leaderboardScope === 'BINARY' ? 'bg-cyan-955 text-cyan-400 font-black' : 'text-slate-500 hover:text-slate-300'} font-bold">🔢 二進位</button>
+                    <button onclick="switchLeaderboardScope('SORTING')" class="px-2.5 py-1 rounded-lg text-[10.5px] font-mono cursor-pointer transition ${state.leaderboardScope === 'SORTING' ? 'bg-emerald-950 text-emerald-400 font-black' : 'text-slate-500 hover:text-slate-300'} font-bold">⚖️ 排序塔</button>
+                    <button onclick="switchLeaderboardScope('GRID')" class="px-2.5 py-1 rounded-lg text-[10.5px] font-mono cursor-pointer transition ${state.leaderboardScope === 'GRID' ? 'bg-amber-955 text-amber-400 font-black' : 'text-slate-500 hover:text-slate-300'} font-bold">📦 指令車</button>
+                  </div>
+                ` : `
+                  <div class="flex gap-2 items-center flex-wrap">
+                    <div class="flex gap-1 bg-slate-955 p-1 rounded-xl border border-slate-850">
+                      <button onclick="switchHistoryFilter('ALL')" class="px-2.5 py-1 rounded-lg text-[10.5px] font-mono cursor-pointer transition ${state.historyFilter === 'ALL' ? 'bg-slate-800 text-white font-bold' : 'text-slate-500 hover:text-slate-300'}">全部</button>
+                      <button onclick="switchHistoryFilter('BINARY')" class="px-2.5 py-1 rounded-lg text-[10.5px] font-mono cursor-pointer transition ${state.historyFilter === 'BINARY' ? 'bg-cyan-950 text-cyan-400' : 'text-slate-500 hover:text-slate-300'}">二進位</button>
+                      <button onclick="switchHistoryFilter('SORTING')" class="px-2.5 py-1 rounded-lg text-[10.5px] font-mono cursor-pointer transition ${state.historyFilter === 'SORTING' ? 'bg-emerald-950 text-emerald-400' : 'text-slate-500 hover:text-slate-300'}">秤重排序</button>
+                      <button onclick="switchHistoryFilter('GRID')" class="px-2.5 py-1 rounded-lg text-[10.5px] font-mono cursor-pointer transition ${state.historyFilter === 'GRID' ? 'bg-amber-950 text-amber-400' : 'text-slate-500 hover:text-slate-300'}">大地程式</button>
+                    </div>
+                    <button onclick="clearHistoryRecords()" class="p-1 px-2.5 bg-rose-950/40 text-rose-451 text-rose-400 rounded-lg text-[10px] hover:bg-rose-900 transition border border-rose-900/40 cursor-pointer font-mono">清空</button>
+                  </div>
+                `}
+              </div>
+            </div>
+
+            <!-- LEADERBOARD DATA GRID -->
+            ${state.dashboardTab === 'LEADERBOARD' ? `
+              <div class="space-y-3">
+                <div class="text-xs text-slate-500 font-bold font-mono uppercase tracking-widest flex justify-between px-3">
+                  <span>玩家角色 / 吉祥物</span>
+                  <span>
+                    ${state.leaderboardScope === 'TOTAL' ? '🏆 累計得分' : ''}
+                    ${state.leaderboardScope === 'BINARY' ? '🔢 二進位解碼最高分' : ''}
+                    ${state.leaderboardScope === 'SORTING' ? '⚖️ 天秤幾何排序最高分' : ''}
+                    ${state.leaderboardScope === 'GRID' ? '📦 大地程式空間最高分' : ''}
+                  </span>
+                </div>
+
+                <div class="divide-y divide-slate-800/60 max-h-[300px] overflow-y-auto pr-1">
+                  ${getLeaderboardData().map((prof, index) => {
+                    const isSelf = prof.id === state.activeProfileId;
+                    let rankBadge = '';
+                    if (index === 0) rankBadge = '👑 金獎 1st';
+                    else if (index === 1) rankBadge = '🥈 銀獎 2nd';
+                    else if (index === 2) rankBadge = '🥉 銅獎 3rd';
+                    else rankBadge = `殿軍 #${index + 1}`;
+
+                    return `
+                      <div class="flex items-center justify-between py-3.5 px-3.5 rounded-2xl transition duration-150 ${isSelf ? 'bg-cyan-950/20 border-l-4 border-cyan-500 shadow-sm' : 'hover:bg-slate-900/30'}">
+                        <div class="flex items-center gap-4">
+                          <div class="w-16 text-xs font-mono font-bold text-left ${index === 0 ? 'text-yellow-400' : index === 1 ? 'text-stone-300' : index === 2 ? 'text-amber-600' : 'text-slate-500'}">
+                            ${rankBadge}
+                          </div>
+                          <div class="text-2xl select-none">${prof.avatar}</div>
+                          <div>
+                            <span class="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5 flex-wrap">
+                              ${prof.name}
+                              ${isSelf ? '<span class="bg-cyan-400/20 text-cyan-400 text-[9px] px-1.5 py-0.2 rounded-full font-bold tracking-widest border border-cyan-800/40">本人</span>' : ''}
+                            </span>
+                            <div class="text-[10px] text-slate-500 font-mono mt-0.5">
+                              二進位: ${prof.binaryHighScore} pt | 天秤排序: ${prof.sortingHighScore} pt | 蜘蛛漫遊: ${prof.gridHighScore} pt
+                            </div>
+                          </div>
+                        </div>
+
+                        <div class="text-right">
+                          <span class="text-sm sm:text-base font-black font-mono tracking-tight ${isSelf ? 'text-cyan-400' : 'text-slate-200'}">
+                            ${state.leaderboardScope === 'TOTAL' ? `${prof.totalAccumulatedScore} pt` : ''}
+                            ${state.leaderboardScope === 'BINARY' ? `${prof.binaryHighScore} 分` : ''}
+                            ${state.leaderboardScope === 'SORTING' ? `${prof.sortingHighScore} 分` : ''}
+                            ${state.leaderboardScope === 'GRID' ? `${prof.gridHighScore} 分` : ''}
+                          </span>
+                        </div>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+            ` : `
+              <!-- HISTORY RECORDS VIEW -->
+              <div class="pr-1">
+                ${getFilteredRecords().length === 0 ? `
+                  <div class="py-12 text-center text-slate-500 text-xs font-mono">
+                    📭 目前尚無此分類下的遊玩歷史紀錄。去上面選個遊戲玩幾局吧！
+                  </div>
+                ` : `
+                  <div class="space-y-2.5 max-h-[300px] overflow-y-auto">
+                    ${getFilteredRecords().map(rec => {
+                      const userObj = state.profiles.find(p => p.id === rec.userId);
+                      const avatar = userObj ? userObj.avatar : '👤';
+                      
+                      let badgeStr = '';
+                      if (rec.gameType === 'BINARY') badgeStr = '<span class="bg-cyan-950 text-cyan-400 border border-cyan-900 px-1.5 py-0.2 rounded text-[10px] font-bold">二進位翻牌</span>';
+                      else if (rec.gameType === 'SORTING') badgeStr = '<span class="bg-emerald-950 text-emerald-400 border border-emerald-900 px-1.5 py-0.2 rounded text-[10px] font-bold">天秤排序塔</span>';
+                      else badgeStr = '<span class="bg-amber-955 bg-amber-950 text-amber-400 border border-amber-900 px-1.5 py-0.2 rounded text-[10px] font-bold">大地指令車</span>';
+
+                      return `
+                        <div class="bg-slate-950/45 border border-slate-850 hover:border-slate-800 p-3.5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors">
+                          <div class="flex items-center gap-3">
+                            <span class="text-xl select-none">${avatar}</span>
+                            <div>
+                              <div class="flex items-center gap-2">
+                                <span class="text-xs font-bold text-white">${rec.userName}</span>
+                                <span class="text-[9px] text-slate-500 font-mono">(${rec.date})</span>
+                              </div>
+                              <div class="text-xs text-slate-400 mt-1 flex flex-wrap items-center gap-2">
+                                ${badgeStr}
+                                <span class="text-slate-300 font-sans">${rec.details}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div class="text-right">
+                            <span class="text-emerald-400 font-bold text-xs bg-emerald-950/45 border border-emerald-900/60 p-1 px-2.5 rounded-lg">
+                              +${rec.score} pt 得分
+                            </span>
+                          </div>
+                        </div>
+                      `;
+                    }).join('')}
+                  </div>
+                `}
+              </div>
+            `}
+
+          </div>
+        </main>
+      `;
+    }
+
+    // ==================== SCREEN RENDERING: BINARY GAME ====================
+    function renderBinaryScreen(activeUser) {
+      const activeBitsList = binaryState.playerBits;
+      const values = [16, 8, 4, 2, 1];
+      const sum = activeBitsList.reduce((acc, bit, idx) => acc + (bit === '1' ? values[idx] : 0), 0);
+
+      return `
+        <div class="min-h-screen bg-slate-900 text-slate-100 flex flex-col p-4 md:p-6 select-none animate-fade-in">
+          
+          <!-- Top Header controls -->
+          <div class="w-full max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 border-b border-slate-700 pb-4 mb-6">
+            <div class="flex items-center gap-3 w-full md:w-auto">
+              <button onclick="navigate('HOME')" class="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 active:bg-slate-950 font-semibold rounded-xl text-xs transition border border-slate-600 shadow-sm cursor-pointer whitespace-nowrap">
+                <i data-lucide="arrow-left" class="w-4 h-4"></i> 返回大廳
+              </button>
+              <div>
+                <span class="bg-cyan-900/40 text-cyan-400 border border-cyan-800/60 px-2 py-0.5 rounded-md text-xs font-bold uppercase tracking-wider">基礎邏輯模組</span>
+                <h1 class="text-xl md:text-2xl font-bold tracking-tight text-white flex items-center gap-1.5 flex-wrap">
+                  二進位翻牌解碼器 <span class="text-amber-400 text-xs font-mono font-bold bg-amber-955/25 px-2 py-0.5 border border-amber-900/40 rounded">倍增開關版</span>
+                </h1>
+              </div>
+            </div>
+
+            <!-- Stats Bar -->
+            <div class="flex flex-wrap items-center gap-2 bg-slate-800/80 p-2 rounded-xl border border-slate-700 shadow-inner">
+              <div class="text-xs px-3 py-1 bg-slate-900 border border-amber-700/40 text-amber-300 rounded-lg font-mono">
+                👤 帳號: <span class="font-bold">${activeUser.name}</span>
+              </div>
+              <div class="text-xs px-3 py-1 bg-slate-900 rounded-lg text-slate-400 font-mono">
+                最高分: <span class="text-cyan-400 font-bold">${activeUser.binaryHighScore}</span>
+              </div>
+              <div class="text-xs px-3 py-1 bg-slate-900 rounded-lg text-slate-400 font-mono">
+                得分: <span class="text-emerald-400 font-bold">${binaryState.score}</span>
+              </div>
+              <div class="text-xs px-3 py-1 rounded-lg font-mono border ${binaryState.timeLeft <= 15 ? 'bg-rose-955 bg-rose-900/40 border-rose-800 text-rose-400 animate-pulse' : 'bg-slate-900 border-slate-700 text-amber-400'}">
+                時間: <span class="font-bold">${binaryState.timeLeft}s</span>
+              </div>
+
+              <!-- Icon buttons -->
+              <div class="flex gap-1">
+                <button onclick="toggleBinaryPlaying()" class="p-1.5 rounded-lg border cursor-pointer transition ${binaryState.isPlaying ? 'bg-amber-600 text-white border-amber-500' : 'bg-emerald-600 text-white border-emerald-500'}">
+                  ${binaryState.isPlaying ? '<i data-lucide="pause" class="w-4 h-4"></i>' : '<i data-lucide="play" class="w-4 h-4"></i>'}
+                </button>
+                <button onclick="resetBinaryGame()" class="p-1.5 bg-slate-700 hover:bg-slate-650 text-slate-200 border border-slate-600 rounded-lg cursor-pointer transition">
+                  <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                </button>
+                <button onclick="triggerBinaryInstructions()" class="p-1.5 bg-slate-700 hover:bg-slate-650 text-slate-200 border border-slate-600 rounded-lg cursor-pointer transition">
+                  <i data-lucide="help-circle" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Main Layout -->
+          <div class="flex-1 w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch mb-6">
+            
+            <!-- Shutter switches -->
+            <div class="lg:col-span-12 xl:col-span-5 flex flex-col bg-slate-800/40 rounded-2xl border-2 border-slate-755 p-4 md:p-6 shadow-2xl relative">
+              <div class="absolute top-3 left-4 flex items-center gap-1.5 text-xs font-bold text-amber-300 bg-amber-950/40 border border-amber-900/60 p-1 px-2.5 rounded-md leading-none">
+                <i data-lucide="sliders" class="w-3.5 h-3.5"></i> 實體磁吸開關盤 (Switchboard Plate)
+              </div>
+
+              <div class="flex-1 flex flex-col justify-center items-center mt-8">
+                <div class="w-full max-w-md bg-stone-800 border-8 border-stone-700 p-6 rounded-3xl shadow-3xl text-stone-200 relative">
+                  <div class="absolute inset-2 border border-stone-600/30 rounded-2xl pointer-events-none"></div>
+                  
+                  <div class="text-center font-bold text-[10px] text-stone-400 select-none pb-4 font-mono border-b border-stone-700 flex justify-between px-2">
+                    <span>最高位元 (2^4)</span>
+                    <span>五位倍增邏輯卡排</span>
+                    <span>最低位元 (2^0)</span>
+                  </div>
+
+                  <!-- 5 Flaps Grid for Doubling -->
+                  <div class="grid grid-cols-5 gap-2 mt-8">
+                    ${values.map((val, idx) => {
+                      const bit = activeBitsList[idx];
+                      return `
+                        <div class="flex flex-col items-center">
+                          <div class="mb-2 text-center font-bold font-mono text-xs text-amber-300 select-none">[${val}]</div>
+
+                          <!-- Card Button -->
+                          <button onclick="flipBinaryBit(${idx})" ${!binaryState.isPlaying ? 'disabled' : ''} class="w-12 h-20 sm:w-16 sm:h-28 rounded-xl sm:rounded-2xl border-4 relative overflow-hidden focus:outline-none transition-all cursor-pointer ${bit === '1' ? 'bg-gradient-to-b from-amber-100 to-amber-200 text-stone-900 border-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.25)]' : 'bg-neutral-950 text-neutral-500 border-stone-700'}">
+                            <div class="absolute top-0 left-0 right-0 h-2 bg-stone-700/60 border-b border-stone-900/25"></div>
+                            
+                            <div class="absolute inset-x-0 top-4 sm:top-6 flex flex-col items-center select-none">
+                              <span class="text-2xl sm:text-3xl font-black font-mono leading-none ${bit === '1' ? 'text-amber-955' : 'text-stone-500'}">${bit}</span>
+                              <span class="text-[8px] sm:text-[9px] font-bold mt-1 uppercase px-1 rounded font-mono ${bit === '1' ? 'bg-amber-800/15 text-amber-900' : 'bg-stone-905 bg-stone-900 text-stone-600'}">${bit === '1' ? '開' : '關'}</span>
+                            </div>
+
+                            <div class="absolute bottom-1 sm:bottom-1.5 inset-x-0 text-center text-[7px] sm:text-[8px] font-mono select-none">
+                              ${idx === 4 ? `<span class="${bit === '1' ? 'text-amber-900 font-bold' : 'text-stone-600'}">起點</span>` : `<span class="${bit === '1' ? 'text-amber-900 font-bold' : 'text-stone-600'}">${values[idx + 1]}╳2</span>`}
+                            </div>
+                          </button>
+
+                          <div class="mt-2.5 flex flex-col items-center font-mono text-[9px] text-stone-400 select-none">
+                            <span class="font-bold opacity-80">卡牌 ${5-idx}</span>
+                          </div>
+                        </div>
+                      `;
+                    }).join('')}
+                  </div>
+
+                  <div class="mt-8 flex justify-between items-center text-[10px] text-stone-400 font-mono bg-stone-900/70 p-3 rounded-2xl border border-stone-700">
+                    <span class="flex items-center gap-1.5 text-stone-300">
+                      <span class="w-2.5 h-2.5 rounded bg-black inline-block border border-stone-600"></span> 0 = 關閉
+                    </span>
+                    <span class="flex items-center gap-1.5 text-white">
+                      <span class="w-2.5 h-2.5 rounded bg-amber-400 inline-block border border-amber-305"></span> 1 = 開啟
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Console logs box -->
+              <div class="mt-4 p-3.5 rounded-xl bg-slate-900 border border-slate-700 flex items-center justify-center gap-2">
+                <i data-lucide="${binaryState.matchSuccess ? 'check-circle' : 'eye'}" class="w-5 h-5 text-amber-400"></i>
+                <p class="text-xs md:text-sm font-semibold text-slate-350">${binaryState.feedbackMsg}</p>
+              </div>
+            </div>
+
+            <!-- Target code deck column -->
+            <div class="lg:col-span-6 xl:col-span-3 flex flex-col items-center justify-between bg-slate-800/40 rounded-2xl border-2 border-slate-755 p-4 md:p-6 shadow-2xl relative">
+              <div class="absolute top-3 left-4 flex items-center gap-1 text-xs font-bold text-cyan-400 bg-cyan-950/45 border border-cyan-900 px-2.5 py-1 rounded-md">
+                題目密碼卡
+              </div>
+
+              <!-- Game Over Splash Frame Inside Box -->
+              ${binaryState.timeLeft === 0 ? `
+                <div class="absolute inset-0 bg-slate-950/95 rounded-2xl z-20 flex flex-col items-center justify-center p-4 text-center animate-fade-in">
+                  <i data-lucide="sparkles" class="w-12 h-12 text-amber-400 mb-3 animate-pulse"></i>
+                  <h3 class="text-lg font-bold text-white">挑戰時間截止！</h3>
+                  <p class="text-slate-400 text-xs mt-1.5 max-w-xs leading-relaxed">
+                    你在本次倍增編碼模擬中成功儲存了 <span class="text-emerald-400 font-extrabold text-base">${binaryState.score}</span> 回合數據！
+                  </p>
+                  <button onclick="resetBinaryGame()" class="mt-6 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center gap-1 cursor-pointer transition">
+                    <i data-lucide="refresh-cw" class="w-4 h-4"></i> 再玩一局
+                  </button>
+                </div>
+              ` : ''}
+
+              <!-- Visual of target number in display card -->
+              <div class="flex-1 w-full flex flex-col justify-center items-center mt-4">
+                <div class="w-44 h-64 bg-slate-950 rounded-2xl shadow-2xl p-4 border-[5px] border-amber-900 flex flex-col justify-between items-center relative select-none">
+                  <div class="absolute top-2.5 left-2.5 text-[10px] font-mono text-slate-500 leading-none">
+                    🎯 TARGET<br><span class="text-xs text-amber-400">#${binaryState.targetNum}</span>
+                  </div>
+                  <div class="absolute bottom-2.5 right-2.5 text-[10px] font-mono text-slate-500 leading-none">
+                    🎯 TARGET<br><span class="text-xs text-amber-400">#${binaryState.targetNum}</span>
+                  </div>
+
+                  <div class="w-12 h-12 border border-slate-800 rounded-full flex items-center justify-center mt-3 bg-slate-900">
+                    <span class="text-[10px] text-amber-400 font-bold font-mono tracking-widest">CODE</span>
+                  </div>
+
+                  <div class="flex flex-col items-center justify-center">
+                    <span class="text-6xl font-mono font-black text-white leading-none">${binaryState.targetNum}</span>
+                    <div class="text-[10px] text-stone-400 font-mono font-bold mt-2 flex items-center gap-1 bg-stone-900 p-1 px-2.5 border border-stone-800 rounded whitespace-nowrap">
+                      目前加總: <span class="${sum === binaryState.targetNum ? 'text-emerald-400' : 'text-amber-400'}">${sum}</span>
+                    </div>
+                  </div>
+
+                  <div class="text-[9px] text-slate-500 font-bold tracking-widest text-center select-none pb-2">目標範圍 1 ~ 31</div>
+                </div>
+              </div>
+
+              <div class="w-full flex gap-2.5 mt-4">
+                <button onclick="skipBinaryCard()" ${!binaryState.isPlaying ? 'disabled' : ''} class="flex-1 py-2.5 bg-slate-700 hover:bg-slate-650 hover:text-white rounded-xl text-xs font-bold cursor-pointer transition">換一題</button>
+                <button onclick="skipBinaryCard()" ${!binaryState.isPlaying ? 'disabled' : ''} class="flex-1 py-2 bg-cyan-600 hover:bg-cyan-500 text-cyan-50 font-bold rounded-xl text-xs flex justify-center items-center gap-1 cursor-pointer transition">略過下一張 <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i></button>
+              </div>
+            </div>
+
+            <!-- RIGHT: A4 Cheat Sheet -->
+            <div id="cheat-sheet-dock" class="lg:col-span-6 xl:col-span-4 flex flex-col bg-slate-100 text-slate-900 rounded-3xl border-4 border-amber-955 p-5 shadow-2xl relative max-h-[60vh] lg:max-h-none overflow-y-auto">
+              <!-- Fold corner decorative -->
+              <div class="absolute top-0 right-0 w-8 h-8 bg-amber-200 border-l border-b border-amber-900/40 rounded-bl-xl"></div>
+
+              <div class="flex items-center gap-2 pb-2 border-b-2 border-slate-350 mb-4 select-none">
+                <span class="p-1.5 bg-slate-100 bg-slate-900 text-amber-403 text-amber-300 rounded-lg"><i data-lucide="layers" class="w-4 h-4"></i></span>
+                <div>
+                  <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">A4 實體格子對照表</p>
+                  <h2 class="text-sm font-extrabold text-slate-955 font-mono leading-none">DOUBLING LOGIC TABLE</h2>
+                </div>
+              </div>
+
+              <!-- Terminology Card -->
+              <div class="bg-amber-50 border-l-4 border-amber-600 p-2.5 rounded-r-xl mb-4 text-xs">
+                <h4 class="font-bold text-amber-900 flex items-center gap-1">什麼是「倍增邏輯」？</h4>
+                <p class="text-[10.5px] leading-relaxed text-slate-705 mt-1">
+                  實體卡牌配置 1, 2, 4, 8, 16 採取<b>「前一項的兩倍」</b>結構。藉由這五個開關（0與1）的狀態組合，即可完美湊出1~31內所有的任意數，免用乘次法！
+                </p>
+              </div>
+
+              <div class="flex-1 overflow-y-auto border border-slate-300 rounded-xl bg-white p-2 text-xs">
+                <div class="text-[10px] font-mono text-slate-400 flex justify-between pb-1 px-1 border-b">
+                  <span>十進位點數</span>
+                  <span>16 8 4 2 1 圖形</span>
+                  <span>編碼</span>
+                </div>
+                <div class="divide-y divide-slate-100 max-h-[250px] lg:max-h-[350px] overflow-y-auto pr-0.5 mt-1">
+                  ${Array.from({ length: 31 }, (_, i) => i + 1).map(val => {
+                    const isFoc = val === binaryState.targetNum;
+                    const bStr = getBinaryStringOfNum(val);
+                    return `
+                      <div class="flex items-center justify-between py-1.5 px-2 rounded-lg ${isFoc ? 'bg-amber-100 font-bold border-2 border-amber-400 shadow-sm' : ''}">
+                        <span class="font-mono font-bold w-6 text-center ${isFoc ? 'text-amber-800' : 'text-slate-800'}">${val}</span>
+                        <div class="flex items-center gap-1">
+                          ${bStr.split('').map(char => `<span class="w-3.5 h-3.5 rounded border border-slate-300 flex items-center justify-center text-[9px] font-mono ${char === '1' ? 'bg-amber-400 border-amber-500 font-black text-amber-951' : 'bg-slate-800 text-slate-300 border-slate-900'}">${char}</span>`).join('')}
+                        </div>
+                        <span class="font-mono text-[9px] ${isFoc ? 'text-amber-900 font-bold' : 'text-slate-500'}">${bStr}</span>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      `;
+    }
+
+    // Convert value format
+    function getBinaryStringOfNum(num) {
+      const values = [16, 8, 4, 2, 1];
+      return values.map(val => ((num & val) ? '1' : '0')).join('');
+    }
+
+    // ==================== SCREEN RENDERING: SORTING GAME ====================
+    function renderSortingScreen(activeUser) {
+      return `
+        <div class="min-h-screen bg-slate-900 text-slate-100 flex flex-col p-4 md:p-6 select-none animate-fade-in">
+          
+          <!-- Top Header controls -->
+          <div class="w-full max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 border-b border-slate-700 pb-4 mb-6">
+            <div class="flex items-center gap-3 w-full md:w-auto">
+              <button onclick="navigate('HOME')" class="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 active:bg-slate-950 font-semibold rounded-xl text-xs transition border border-slate-600 shadow-sm cursor-pointer whitespace-nowrap">
+                <i data-lucide="arrow-left" class="w-4 h-4"></i> 返回大廳
+              </button>
+              <div>
+                <span class="bg-emerald-900/40 text-emerald-400 border border-emerald-800/60 px-2 py-0.5 rounded-md text-xs font-bold uppercase tracking-wider">演算法模組</span>
+                <h1 class="text-xl md:text-2xl font-bold tracking-tight text-white flex items-center gap-1.5 flex-wrap">
+                  天秤與幾何排序塔 <span class="text-slate-400 text-sm hidden md:inline font-mono">Balance-Scale Sorting Tower</span>
+                </h1>
+              </div>
+            </div>
+
+            <!-- Stats Bar -->
+            <div class="flex flex-wrap items-center gap-2 bg-slate-800/80 p-2 rounded-xl border border-slate-700 shadow-inner">
+              <div class="text-xs px-3 py-1 bg-slate-900 border border-amber-700/40 text-amber-300 rounded-lg font-mono">
+                👤 帳號: <span class="font-bold">${activeUser.name}</span>
+              </div>
+              <div class="text-xs px-3 py-1 bg-slate-900 rounded-lg text-slate-400 font-mono">
+                最高分: <span class="text-yellow-400 font-bold">${activeUser.sortingHighScore}</span>
+              </div>
+              <div class="text-xs px-3 py-1 bg-slate-900 rounded-lg text-slate-400 font-mono">
+                累計分數: <span class="text-emerald-400 font-bold">${sortingState.score}</span>
+              </div>
+              <div class="flex gap-1">
+                <button onclick="generateWeights()" class="p-1.5 bg-slate-700 hover:bg-slate-655 text-slate-200 border border-slate-600 rounded-lg cursor-pointer transition animate-none" title="重置配重">
+                  <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                </button>
+                <button onclick="triggerSortingInstructions()" class="p-1.5 bg-slate-700 hover:bg-slate-655 text-slate-200 border border-slate-600 rounded-lg cursor-pointer transition animate-none" title="規則">
+                  <i data-lucide="help-circle" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sandbox Content -->
+          <div class="flex-1 w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch mb-6">
+            
+            <!-- LEFT BALANCE DEVICE -->
+            <div class="lg:col-span-12 xl:col-span-8 flex flex-col justify-between bg-slate-800/40 rounded-2xl border-2 border-slate-755 p-4 md:p-6 shadow-2xl relative">
+              <div class="absolute top-3 left-4 flex items-center gap-1.5 text-xs font-bold text-emerald-400 bg-emerald-950/40 border border-emerald-900/60 p-1 px-2.5 rounded-lg leading-none">
+                <i data-lucide="award" class="w-3.5 h-3.5"></i> 木質實體天秤 (Geometric Balance Scale)
+              </div>
+
+              <!-- Top floating dynamic weights bank -->
+              <div class="mt-8 flex flex-col items-center">
+                <p class="text-[11px] text-slate-400 font-sans tracking-wide mb-3">✦ 點選下方隨機解鎖的 5 個神祕砝碼，將其中兩個置入天秤，量測出兩者的相對大小：</p>
+                
+                <div class="flex gap-3 md:gap-4 flex-wrap justify-center">
+                  ${sortingState.weights.map(item => {
+                    const isOnScale = sortingState.leftPan?.id === item.id || sortingState.rightPan?.id === item.id;
+                    const isPlaced = sortingState.answerSlots.some(slot => slot?.id === item.id);
+                    return `
+                      <button onclick="handleWeightClick('${item.id}')" ${isOnScale || isPlaced ? 'disabled' : ''} class="w-12 h-14 md:w-14 md:h-16 rounded-xl border-2 flex flex-col justify-center items-center shadow-md select-none transition cursor-pointer ${isOnScale || isPlaced ? 'opacity-25 bg-slate-950 cursor-not-allowed border-dashed border-slate-850 text-slate-700 font-black' : `${item.color} border-slate-500 hover:scale-105 hover:-translate-y-0.5`} duration-150">
+                        <span class="text-xl leading-none mt-0.5">${item.symbol}</span>
+                        <span class="text-[9px] font-bold uppercase tracking-wider opacity-90 mt-1">砝碼</span>
+                      </button>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+
+              <!-- The Balanced Scale drawing area structured mechanically -->
+              <div class="h-64 flex flex-col justify-center items-center relative mt-6 border-b border-slate-700 pb-10">
+                <div class="w-full max-w-lg flex flex-col items-center relative">
+                  
+                  <!-- Scale Crossbar (Pivot rotation based on scale angle) -->
+                  <div class="w-full h-3 border-2 border-slate-600 bg-stone-700/80 rounded-full flex justify-between items-center px-4 relative transition-transform duration-300" style="transform: rotate(${sortingState.scaleAngle}deg);">
+                    <!-- Dynamic left hang thread -->
+                    <div class="absolute left-6 w-0.5 h-20 bg-amber-700/50 -bottom-20 flex justify-center items-end">
+                      <!-- Left Pan Plate -->
+                      <div class="w-20 md:w-24 h-12 bg-lime-850/25 rounded-b-full border-b-4 border-amber-800 shadow-md relative flex justify-center items-end pb-1.5 transition-all">
+                        ${sortingState.leftPan ? `
+                          <button onclick="removeFromPan('LEFT')" class="p-1 px-2.5 bg-slate-900 border border-amber-500 text-amber-300 rounded-lg text-xs font-mono font-bold hover:bg-rose-950 hover:text-rose-451 hover:border-rose-900 transition flex flex-col items-center gap-0.5 cursor-pointer leading-none">
+                            <span class="text-[10px] opacity-70">天秤 A</span>
+                            <span class="text-base font-black">${sortingState.leftPan.symbol}</span>
+                          </button>
+                        ` : '<span class="text-[9px] text-slate-500 font-bold uppercase select-none pb-1.5">秤盤 A</span>'}
+                      </div>
+                    </div>
+
+                    <!-- Pivot Pin Center -->
+                    <div class="w-6 h-6 rounded-full border-4 border-amber-500 bg-stone-900 absolute left-1/2 -translate-x-1/2"></div>
+
+                    <!-- Dynamic right hang thread -->
+                    <div class="absolute right-6 w-0.5 h-20 bg-amber-700/50 -bottom-20 flex justify-center items-end">
+                      <!-- Right Pan Plate -->
+                      <div class="w-20 md:w-24 h-12 bg-lime-850/25 rounded-b-full border-b-4 border-amber-800 shadow-md relative flex justify-center items-end pb-1.5 transition-all">
+                        ${sortingState.rightPan ? `
+                          <button onclick="removeFromPan('RIGHT')" class="p-1 px-2.5 bg-slate-900 border border-amber-500 text-amber-300 rounded-lg text-xs font-mono font-bold hover:bg-rose-950 hover:text-rose-451 hover:border-rose-900 transition flex flex-col items-center gap-0.5 cursor-pointer leading-none">
+                            <span class="text-[10px] opacity-70">天秤 B</span>
+                            <span class="text-base font-black">${sortingState.rightPan.symbol}</span>
+                          </button>
+                        ` : '<span class="text-[9px] text-slate-500 font-bold uppercase select-none pb-1.5">秤盤 B</span>'}
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Stand Support Tower -->
+                  <div class="w-6 h-36 bg-stone-800 border-x-2 border-stone-600 border-t-2 mt-1 relative">
+                    <div class="absolute bottom-0 w-28 h-4 bg-stone-900 border-t border-slate-600 rounded-t-lg -left-11 shadow-inner"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Answer deck placement slot options represented visually -->
+              <div id="answer-sort-row" class="mt-6">
+                <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
+                  <span class="text-xs font-bold text-amber-300 font-mono tracking-widest flex items-center gap-1">🧱 【幾何排序塔底座答案區】 (Lightest ➟ Heaviest)</span>
+                  <button onclick="clearAnswerSlots()" class="text-[10px] font-mono text-rose-400 border border-slate-700 p-1 px-2 rounded-lg hover:bg-rose-950 transition cursor-pointer">清空排版</button>
+                </div>
+
+                <div class="grid grid-cols-5 gap-2 md:gap-3.5">
+                  ${sortingState.answerSlots.map((slot, index) => `
+                    <div class="bg-slate-950 border-2 border-dashed border-slate-800 rounded-xl p-2.5 h-20 flex flex-col justify-between items-center relative">
+                      <span class="absolute top-1 left-1.5 text-[8.5px] font-bold text-slate-600 uppercase font-mono">層級 ${index+1}</span>
+                      
+                      <div class="flex-1 flex items-center justify-center w-full mt-3">
+                        ${slot ? `
+                          <button onclick="removeWeightFromAnswerSlot(${index})" class="w-full py-1.5 px-1 ${slot.color} border border-slate-500 rounded-lg text-xs font-bold shadow-md cursor-pointer flex flex-col items-center leading-none">
+                            <span class="text-sm font-bold font-black">${slot.symbol}</span>
+                            <span class="text-[8px] mt-0.5 uppercase opacity-75">退回</span>
+                          </button>
+                        ` : `
+                          <select onchange="placeSelectedWeightInSlot(this.value, ${index})" class="bg-slate-900 text-slate-400 border border-slate-800 p-1 rounded-md text-[10px] w-full cursor-pointer outline-none font-bold">
+                            <option value="">+ 置放</option>
+                            ${sortingState.weights.map(w => {
+                              const isPlaced = sortingState.answerSlots.some(s => s?.id === w.id);
+                              return `<option value="${w.id}" ${isPlaced ? 'disabled' : ''}>${w.symbol} 砝碼</option>`;
+                            }).join('')}
+                          </select>
+                        `}
+                      </div>
+
+                      <span class="text-[9.5px] font-bold font-mono text-slate-500 tracking-tight leading-none mt-1">
+                        ${index === 0 ? '【最輕 1】' : ''}
+                        ${index === 1 ? '【較輕 2】' : ''}
+                        ${index === 2 ? '【中等 3】' : ''}
+                        ${index === 3 ? '【較重 4】' : ''}
+                        ${index === 4 ? '【最重 5】' : ''}
+                      </span>
+                    </div>
+                  `).join('')}
+                </div>
+
+                <!-- Submit answer -->
+                <button onclick="submitSortingAnswer()" class="w-full mt-5 py-3 hover:opacity-90 bg-emerald-600 text-emerald-50 font-black rounded-xl border border-emerald-500 text-xs shadow-lg transform active:scale-95 transition cursor-pointer flex items-center justify-center gap-1 uppercase tracking-wider">
+                  驗證排序邏輯，啟動神祕幾何塔鎖！ <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- RIGHT BLACKBOARD CHALK LOG -->
+            <div class="lg:col-span-12 xl:col-span-4 flex flex-col bg-slate-900 rounded-3xl border-4 border-amber-955 p-4 md:p-6 shadow-2xl relative max-h-[64vh] lg:max-h-none overflow-y-auto">
+              
+              <!-- Blackboard Frame and Slate -->
+              <div class="flex-1 chalkboard border-8 border-stone-800 p-4 rounded-2xl shadow-3xl flex flex-col">
+                <div class="flex justify-between items-center pb-2.5 border-b border-dashed border-emerald-900 mb-4 select-none">
+                  <span class="text-xs font-bold text-slate-300 font-mono tracking-widest flex items-center gap-1">📝 【小黑板秤重紀錄】 (Chalk Log)</span>
+                  <button onclick="clearSchoolroomChalklogs()" class="text-[9.5px] font-mono text-emerald-400 cursor-pointer">抹除痕跡</button>
+                </div>
+
+                <div class="flex-1 overflow-y-auto max-h-[160px] lg:max-h-[220px] font-mono space-y-2 text-xs text-lime-100 pr-1 select-none">
+                  ${sortingState.logs.length === 0 ? `
+                    <p class="text-[11px] text-slate-500 italic py-6 text-center">木質天秤靜止中。請在左側放上砝碼以產生對比痕跡。</p>
+                  ` : sortingState.logs.map(log => `
+                    <div class="flex items-center gap-2 border-b border-emerald-900/35 pb-1 select-none">
+                      <span class="text-emerald-500 font-black">❯</span>
+                      <p>${log}</p>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+
+              <!-- Educational Rules and algorithms logic tabs -->
+              <div class="mt-5 border-t border-slate-800/80 pt-5">
+                <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
+                  <span class="text-xs font-bold text-amber-300 tracking-widest font-mono flex items-center gap-1"><i data-lucide="book-open" class="w-3.5 h-3.5"></i> 演算學法配方指南</span>
+                  
+                  <div class="flex gap-1 bg-slate-950 p-0.5 rounded-lg border border-slate-850">
+                    <button onclick="toggleRecipeSide('BUBBLE')" class="px-2 py-0.5 rounded text-[9px] font-mono ${sortingState.recipeSide === 'BUBBLE' ? 'bg-amber-955 text-amber-400 font-black' : 'text-slate-500'}">冒泡法</button>
+                    <button onclick="toggleRecipeSide('INSERTION')" class="px-2 py-0.5 rounded text-[9px] font-mono ${sortingState.recipeSide === 'INSERTION' ? 'bg-amber-955 text-amber-400 font-black' : 'text-slate-500'}">插入法</button>
+                  </div>
+                </div>
+
+                <!-- Recipe Display Content -->
+                <div class="bg-stone-950 border border-slate-800 rounded-2xl p-4 text-[11px] text-slate-400 font-sans leading-relaxed select-none">
+                  ${sortingState.recipeSide === 'BUBBLE' ? `
+                    <h5 class="text-slate-200 font-bold mb-1.5 uppercase font-mono tracking-wide text-xs">🧪 【冒泡排序規則 (Bubble Sort)】</h5>
+                    <p class="mb-1.5">將相鄰兩張卡片兩兩置入天秤：</p>
+                    <ul class="list-decimal list-inside space-y-1 text-slate-350">
+                      <li>第1張 ＞ 第2張 ➜ 加以交換順序。</li>
+                      <li>第2張 ＞ 第3張 ➜ 重複步驟一。</li>
+                    </ul>
+                    <p class="mt-2 text-teal-400 font-mono font-bold">※ 第一回合循環即可將「最重的砝碼」排到最底層！</p>
+                  ` : `
+                    <h5 class="text-slate-200 font-bold mb-1.5 uppercase font-mono tracking-wide text-xs">🧪 【插入排序規則 (Insertion Sort)】</h5>
+                    <p class="mb-1.5">將砝碼一張一張加入已排序集：</p>
+                    <ul class="list-decimal list-inside space-y-1 text-slate-350">
+                      <li>拿起第三個砝碼，與左邊兩個比對。</li>
+                      <li>依序向左移格，直到比左邊砝碼重，即插入到位。</li>
+                    </ul>
+                    <p class="mt-2 text-teal-400 font-mono font-bold">※ 此法非常接近一般人整理撲克牌的直覺習慣！</p>
+                  `}
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // ==================== SCREEN RENDERING: GRID GAME ====================
+    function renderGridScreen(activeUser) {
+      return `
+        <div class="min-h-screen bg-slate-900 text-slate-100 flex flex-col p-4 md:p-6 select-none animate-fade-in">
+          
+          <!-- Top Header controls -->
+          <div class="w-full max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 border-b border-slate-700 pb-4 mb-6">
+            <div class="flex items-center gap-3 w-full md:w-auto">
+              <button onclick="navigate('HOME')" class="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 active:bg-slate-950 font-semibold rounded-xl text-xs transition border border-slate-600 shadow-sm cursor-pointer whitespace-nowrap">
+                <i data-lucide="arrow-left" class="w-4 h-4"></i> 返回大廳
+              </button>
+              <div>
+                <span class="bg-amber-900/40 text-amber-400 border border-amber-900 px-2 py-0.5 rounded-md text-xs font-bold uppercase tracking-wider">空間決策</span>
+                <h1 class="text-xl md:text-2xl font-bold tracking-tight text-white flex items-center gap-1.5 flex-wrap">
+                  大地指令程式設計 <span class="text-amber-400 text-xs font-mono font-bold bg-amber-955/25 px-2 py-0.5 border border-amber-900/40 rounded">C++ 語法挑戰</span>
+                </h1>
+              </div>
+            </div>
+
+            <!-- Stats Bar -->
+            <div class="flex flex-wrap items-center gap-2 bg-slate-800/80 p-2 rounded-xl border border-slate-700 shadow-inner">
+              <div class="text-xs px-3 py-1 bg-slate-900 border border-amber-700/40 text-amber-300 rounded-lg font-mono font-bold">
+                👤 帳號: <span class="font-bold">${activeUser.name}</span>
+              </div>
+              <div class="text-xs px-3 py-1 bg-slate-900 rounded-lg text-slate-400 font-mono">
+                太空星星分: <span class="text-emerald-400 font-bold">${gridState.score}</span>
+              </div>
+              <div class="text-xs px-3 py-1 bg-slate-900 rounded-lg text-slate-400 font-mono">
+                最高星分: <span class="text-yellow-400 font-bold">${activeUser.gridHighScore}</span>
+              </div>
+              <div class="text-xs px-3 py-1 bg-slate-900 rounded-lg text-slate-400 font-mono">
+                累計時間: <span class="text-white font-bold">${gridState.seconds}s</span>
+              </div>
+              <div class="flex gap-1">
+                <button onclick="resetGridLevel()" class="p-1.5 bg-slate-700 hover:bg-slate-655 text-slate-200 border border-slate-600 rounded-lg cursor-pointer transition" title="重建地圖">
+                  <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+                <button onclick="triggerGridInstructions()" class="p-1.5 bg-slate-700 hover:bg-slate-655 text-slate-200 border border-slate-600 rounded-lg cursor-pointer transition" title="規範">
+                  <i data-lucide="help-circle" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Main Sandbox -->
+          <div class="flex-1 w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch mb-6">
+            
+            <!-- LEFT SPATIAL LAND GRID -->
+            <div class="lg:col-span-12 xl:col-span-4 flex flex-col bg-slate-800/40 rounded-2xl border-2 border-slate-755 p-4 md:p-6 shadow-2xl relative">
+              <div class="absolute top-3 left-4 flex items-center gap-1.5 text-xs font-bold text-amber-300 bg-amber-950/40 border border-amber-900/60 p-1 px-2.5 rounded-lg leading-none">
+                <i data-lucide="navigation" class="w-3.5 h-3.5"></i> 大地地墊圖紙 (6x6 Sandbox Plate)
+              </div>
+
+              <!-- Render Grid map -->
+              <div class="flex-1 flex flex-col justify-center items-center mt-8">
+                <div class="bg-slate-950 border-4 border-slate-800 p-2.5 rounded-2xl shadow-inner grid grid-cols-6 gap-1 w-full max-w-[320px] aspect-square relative select-none">
+                  ${gridState.grid.map(cell => {
+                    const isRobotHere = gridState.robot.x === cell.x && gridState.robot.y === cell.y;
+                    
+                    let cellClasses = 'bg-slate-900/50 border border-slate-800/30';
+                    let content = '';
+                    
+                    if (cell.type === 'START') {
+                      cellClasses += ' bg-cyan-950/20 border-cyan-800';
+                      content = '<span class="text-[9px] font-bold text-cyan-400 select-none">起點</span>';
+                    } else if (cell.type === 'STAR') {
+                      cellClasses += ' bg-amber-950/20';
+                      content = '<span class="text-2xl animate-bounce">⭐</span>';
+                    } else if (cell.type === 'ROCK') {
+                      cellClasses += ' bg-zinc-800 border-zinc-700';
+                      content = '<span class="text-xl">🪨</span>';
+                    }
+
+                    if (isRobotHere) {
+                      // Robot rotation style classes
+                      let rotStyle = '';
+                      if (gridState.robot.dir === 'UP') rotStyle = '-rotate-90';
+                      else if (gridState.robot.dir === 'DOWN') rotStyle = 'rotate-90';
+                      else if (gridState.robot.dir === 'LEFT') rotStyle = 'scale-x-[-1]';
+                      
+                      content = `
+                        <div class="flex flex-col items-center justify-center transition-transform duration-200 ${rotStyle}">
+                          <span class="text-2xl">🤖</span>
+                          <span class="text-[8px] bg-slate-950/80 px-1 border border-cyan-500 rounded text-cyan-400 uppercase font-mono font-bold tracking-tighter leading-none mt-0.5 font-black">ROVER</span>
+                        </div>
+                      `;
+                    }
+
+                    return `
+                      <div class="aspect-square flex items-center justify-center relative rounded-md overflow-hidden ${cellClasses}">
+                        ${content}
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+
+              <!-- Dynamic status bar stdout -->
+              <div class="mt-4 p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center gap-2.5">
+                <i data-lucide="eye" class="w-4 h-4 text-cyan-400 animate-pulse"></i>
+                <p class="text-[11px] font-mono tracking-wide text-cyan-205">${gridState.executionLog}</p>
+              </div>
+            </div>
+
+            <!-- CENTER WORKSPACE CODING PANEL -->
+            <div class="lg:col-span-12 xl:col-span-5 flex flex-col justify-between bg-slate-800/40 rounded-2xl border-2 border-slate-755 p-4 md:p-6 shadow-2xl relative">
+              <div class="absolute top-3 left-4 flex items-center gap-1.5 text-xs font-bold text-cyan-400 bg-cyan-950/45 border border-cyan-900 px-2.5 py-1 rounded-md leading-none">
+                <i data-lucide="compass" class="w-3.5 h-3.5"></i> 卡牌指令程式盤 (Logic Coding Desk)
+              </div>
+
+              <!-- Added commands stack sequence loop list representation -->
+              <div class="mt-8 flex-1 flex flex-col justify-between h-full">
+                <div class="flex-1">
+                  <div class="flex justify-between items-center mb-2.5">
+                    <span class="text-xs font-bold font-mono text-slate-300">🧱 【當前程式指令序列】 (Sequence Stack)</span>
+                    <button onclick="clearCommandSequence()" class="text-[9.5px] font-mono text-rose-400 border border-slate-800 p-0.5 px-2 rounded-lg hover:bg-rose-950">清空序列</button>
+                  </div>
+
+                  <div class="bg-slate-950/60 border border-slate-800 rounded-xl p-3 min-h-[140px] max-h-[180px] overflow-y-auto flex flex-wrap gap-2 items-start content-start pr-1">
+                    ${gridState.commandSequence.length === 0 ? `
+                      <div class="m-auto text-center py-8 text-[11px] text-slate-500 font-sans leading-relaxed">
+                        指令盤為空。請在下方「指令卡庫」點選指令卡，編織並加入順序！卡片背面印有 C++ 實體語法對照。
+                      </div>
+                    ` : gridState.commandSequence.map((cmd, index) => `
+                      <div class="bg-slate-900 border border-slate-750 p-1.5 pl-2.5 rounded-lg text-[10px] text-slate-200 flex items-center gap-1.5 shadow-sm">
+                        <span class="font-bold text-slate-500">${index+1}.</span>
+                        <div class="cursor-pointer" onclick="flipSequenceCard('${cmd.id}')" title="翻轉看 C++ 寫法">
+                          ${cmd.isFlipped ? `<code class="text-[9px] text-amber-300 font-mono leading-none">${cmd.cppCode}</code>` : `<span class="font-bold font-sans">${cmd.label}</span>`}
+                        </div>
+                        <button onclick="removeSequenceCommand('${cmd.id}')" class="text-slate-500 hover:text-rose-400 ml-1">✕</button>
+                      </div>
+                    `).join('')}
+                  </div>
+                </div>
+
+                <!-- Simulation execution buttons panel -->
+                <div class="mt-4 flex gap-2">
+                  <button onclick="runCommandSequence()" ${gridState.isExecuting || gridState.commandSequence.length === 0 ? 'disabled' : ''} class="flex-1 py-3 bg-cyan-600 hover:bg-cyan-500 disabled:bg-cyan-850 disabled:opacity-45 text-cyan-50 font-black rounded-xl text-xs flex justify-center items-center gap-1 cursor-pointer transition shadow-xl uppercase">
+                    <i data-lucide="play" class="w-4 h-4 fill-current"></i> 啟動漫遊模擬 (Run C++)
+                  </button>
+                  <button onclick="resetCommandSequenceRun()" ${!gridState.isExecuting ? 'disabled' : ''} class="px-4 bg-slate-700 hover:bg-slate-655 disabled:bg-slate-855 disabled:opacity-45 rounded-xl border border-slate-600 cursor-pointer transition">
+                    <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- RIGHT MODULE LIBRARY PANEL -->
+            <div class="lg:col-span-12 xl:col-span-3 flex flex-col bg-slate-100 text-slate-950 rounded-3xl border-4 border-amber-955 p-4 md:p-5 shadow-2xl relative max-h-[64vh] lg:max-h-none overflow-y-auto">
+              <div class="absolute top-0 right-0 w-8 h-8 bg-amber-200 border-l border-b border-amber-900/40 rounded-bl-xl font-bold"></div>
+              
+              <div class="flex items-center gap-1.5 pb-2 border-b-2 border-slate-350 mb-3 select-none">
+                <span class="p-1.5 bg-slate-100 bg-slate-900 text-amber-305 text-amber-300 rounded-lg"><i data-lucide="book-open" class="w-4 h-4"></i></span>
+                <div>
+                  <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider leading-none">C++ 手冊對應</p>
+                  <h2 class="text-xs font-extrabold text-slate-955 leading-none">LIBRARY COMMAND BLOCKS</h2>
+                </div>
+              </div>
+
+              <!-- Floating directives scroll bank -->
+              <p class="text-[10px] text-slate-505 mb-2 font-sans select-none">🎯 💡 提示：點按指令卡加入序列。點擊卡片任何部分可<b>「翻轉背面」</b>查看 C++ 的語法描述：</p>
+              
+              <div class="flex-1 overflow-y-auto space-y-2 pr-0.5">
+                ${COMMAND_LIBRARY.map((cmd, idx) => {
+                  const flipId = `lib-${idx}`;
+                  const isFlipped = gridState.library[idx]?.isFlipped || false;
+                  
+                  return `
+                    <div class="bg-white border-2 border-slate-300 rounded-xl p-3 shadow-sm hover:border-amber-700/50 transition cursor-pointer flex flex-col justify-between items-start select-none relative group overflow-hidden">
+                      <div class="w-full flex items-center justify-between" onclick="flipLibraryCard(${idx})">
+                        <span class="text-[8.5px] font-bold text-slate-500 font-mono uppercase bg-slate-100 px-1 border rounded">${cmd.type} CARD</span>
+                        <span class="text-[9px] text-amber-800 font-bold font-mono">🔁 點擊翻轉</span>
+                      </div>
+
+                      <div class="mt-2.5 w-full text-slate-805" onclick="flipLibraryCard(${idx})">
+                        ${isFlipped ? `
+                          <pre class="bg-slate-900 text-amber-300 font-mono text-[9px] p-2 rounded border border-slate-950 overflow-x-auto w-full">${cmd.cppCode}</pre>
+                        ` : `
+                          <p class="text-xs font-sans font-bold leading-none text-slate-950">${cmd.label}</p>
+                          <p class="text-[10px] text-slate-500 font-mono mt-1 font-bold">C++: ${cmd.cppCode.split('\n')[0]}</p>
+                        `}
+                      </div>
+
+                      <button onclick="appendCommandToSequence('${cmd.type}')" class="w-full mt-3 py-1 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-lg text-[10.5px] cursor-pointer flex items-center justify-center gap-1 font-mono transition">
+                        + 加入序列
+                      </button>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+
+          </div>
+        </div>
+      `;
+    }
+
+    // ==================== STATE NAVIGATION ACTIONS ====================
+    function navigate(module) {
+      state.currentModule = module;
+      
+      // Reset variables on view swap
+      if (module === 'BINARY') {
+        resetBinaryGame();
+      } else if (module === 'SORTING') {
+        generateWeights();
+      } else if (module === 'GRID') {
+        resetGridLevel();
+      }
+      render();
+    }
+
+    function switchProfile(id) {
+      state.activeProfileId = id;
+      localStorage.setItem('active_profile_id', id);
+      navigate('HOME');
+    }
+
+    function selectAvatarOption(av) {
+      state.selectedAvatar = av;
+      render();
+    }
+
+    function toggleProfileCreator(open) {
+      state.showCreator = open;
+      render();
+    }
+
+    function handleCreateProfile(e) {
+      e.preventDefault();
+      const input = document.getElementById('new-profile-name');
+      const name = input ? input.value.trim() : '';
+      if (!name) return;
+
+      const newP = {
+        id: `u-${Date.now()}`,
+        name: name,
+        avatar: state.selectedAvatar,
+        binaryHighScore: 0,
+        sortingHighScore: 0,
+        gridHighScore: 0,
+        totalAccumulatedScore: 0
+      };
+
+      state.profiles.push(newP);
+      localStorage.setItem('game_profiles', JSON.stringify(state.profiles));
+      state.activeProfileId = newP.id;
+      localStorage.setItem('active_profile_id', newP.id);
+      
+      state.showCreator = false;
+      render();
+    }
+
+    function switchDashboardTab(tab) {
+      state.dashboardTab = tab;
+      render();
+    }
+
+    function switchLeaderboardScope(scope) {
+      state.leaderboardScope = scope;
+      render();
+    }
+
+    function switchHistoryFilter(filter) {
+      state.historyFilter = filter;
+      render();
+    }
+
+    function clearHistoryRecords() {
+      if (confirm('確定要清空所有的對戰遊玩紀錄嗎？')) {
+        state.records = [];
+        localStorage.setItem('game_records', JSON.stringify([]));
+        render();
+      }
+    }
+
+    function getLeaderboardData() {
+      const list = [...state.profiles];
+      if (state.leaderboardScope === 'TOTAL') {
+        return list.sort((a,b) => b.totalAccumulatedScore - a.totalAccumulatedScore);
+      } else if (state.leaderboardScope === 'BINARY') {
+        return list.sort((a,b) => b.binaryHighScore - a.binaryHighScore);
+      } else if (state.leaderboardScope === 'SORTING') {
+        return list.sort((a,b) => b.sortingHighScore - a.sortingHighScore);
+      } else {
+        return list.sort((a,b) => b.gridHighScore - a.gridHighScore);
+      }
+    }
+
+    function getFilteredRecords() {
+      if (state.historyFilter === 'ALL') return state.records;
+      return state.records.filter(r => r.gameType === state.historyFilter);
+    }
+
+    // ==================== CORE PERSISTENCE BRIDGE ====================
+    function saveProfileSubscores(gameType, earned, details) {
+      const now = new Date();
+      const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+      
+      const activeUser = state.profiles.find(p => p.id === state.activeProfileId) || state.profiles[0];
+
+      // Add Record
+      const newRec = {
+        id: `rec-${Date.now()}-${Math.random().toString(36).substr(2,4)}`,
+        userId: activeUser.id,
+        userName: activeUser.name,
+        gameType,
+        score: earned,
+        details,
+        date: dateStr
+      };
+
+      state.records.unshift(newRec);
+      localStorage.setItem('game_records', JSON.stringify(state.records));
+
+      // Refresh profiling highscore matrices
+      state.profiles = state.profiles.map(p => {
+        if (p.id === activeUser.id) {
+          let binary = p.binaryHighScore;
+          let sorting = p.sortingHighScore;
+          let grid = p.gridHighScore;
+
+          if (gameType === 'BINARY') binary = Math.max(binary, earned);
+          if (gameType === 'SORTING') sorting = Math.max(sorting, earned);
+          if (gameType === 'GRID') grid = Math.max(grid, earned);
+
+          const total = p.totalAccumulatedScore + earned;
+
+          return {
+            ...p,
+            binaryHighScore: binary,
+            sortingHighScore: sorting,
+            gridHighScore: grid,
+            totalAccumulatedScore: total
+          };
+        }
+        return p;
+      });
+
+      localStorage.setItem('game_profiles', JSON.stringify(state.profiles));
+    }
+
+    // ==================== BINARY MODULE ACTIONS ====================
+    function generateBinaryTarget(exclude) {
+      const possible = Array.from({ length: 31 }, (_, i) => i + 1);
+      const filtered = exclude ? possible.filter(n => n !== exclude) : possible;
+      binaryState.targetNum = filtered[Math.floor(Math.random() * filtered.length)];
+    }
+
+    function resetBinaryGame() {
+      if (binaryState.timerInterval) clearInterval(binaryState.timerInterval);
+      
+      generateBinaryTarget();
+      binaryState.playerBits = ['0', '0', '0', '0', '0'];
+      binaryState.timeLeft = 60;
+      binaryState.score = 0;
+      binaryState.isPlaying = true;
+      binaryState.hasStarted = true;
+      binaryState.matchSuccess = false;
+      binaryState.feedbackMsg = '請對照右側 A4 表格，解鎖對應的加總開關！';
+
+      binaryState.timerInterval = setInterval(() => {
+        if (binaryState.timeLeft > 0 && binaryState.isPlaying) {
+          binaryState.timeLeft--;
+          if (binaryState.timeLeft === 0) {
+            binaryState.isPlaying = false;
+            clearInterval(binaryState.timerInterval);
+            // Save Score
+            saveProfileSubscores('BINARY', binaryState.score, `解碼成功 ${binaryState.score} 次組合`);
+          }
+          render();
+        }
+      }, 1000);
+
+      render();
+    }
+
+    // Toggle
+    function toggleBinaryPlaying() {
+      binaryState.isPlaying = !binaryState.isPlaying;
+      render();
+    }
+
+    function skipBinaryCard() {
+      if (!binaryState.isPlaying) return;
+      generateBinaryTarget();
+      binaryState.playerBits = ['0', '0', '0', '0', '0'];
+      binaryState.matchSuccess = false;
+      binaryState.feedbackMsg = '已更換密碼卡目標！';
+      render();
+    }
+
+    function flipBinaryBit(index) {
+      if (!binaryState.isPlaying) return;
+      
+      binaryState.playerBits[index] = binaryState.playerBits[index] === '0' ? '1' : '0';
+      
+      // Calculate updated sum
+      const values = [16, 8, 4, 2, 1];
+      const sum = binaryState.playerBits.reduce((acc, bit, idx) => acc + (bit === '1' ? values[idx] : 0), 0);
+
+      if (sum === binaryState.targetNum) {
+        binaryState.matchSuccess = true;
+        binaryState.score++;
+        binaryState.feedbackMsg = `成功儲存數據！解解解密成功！(+1 pt!)`;
+        render();
+
+        setTimeout(() => {
+          generateBinaryTarget(binaryState.targetNum);
+          binaryState.playerBits = ['0', '0', '0', '0', '0'];
+          binaryState.matchSuccess = false;
+          binaryState.feedbackMsg = '下一張題目就位！繼續奮鬥。';
+          render();
+        }, 1100);
+      } else {
+        const formulaParts = binaryState.playerBits.map((b,i) => b === '1' ? values[i] : null).filter(Boolean);
+        if (formulaParts.length > 0) {
+          binaryState.feedbackMsg = `目前：${formulaParts.join(' + ')} = ${sum} (目標是: ${binaryState.targetNum})`;
+        } else {
+          binaryState.feedbackMsg = `開關已全部關閉。目標是: ${binaryState.targetNum}`;
+        }
+        render();
+      }
+    }
+
+    function triggerBinaryInstructions() {
+      showModal(
+        '基礎邏輯模組',
+        '【二進位翻牌解碼器 - 倍增版】',
+        '這是一套專為二進位「位元權重」與「倍增邏輯」設計的數位實體桌遊。透過一倍、兩倍、四倍、八倍、十六倍等卡牌開關，直觀理解電腦底層將所有資料以 0 與 1 組合成千百萬種數值的運作本質！',
+        [
+          { icon: '1', text: '觀察目標數字：拿起與放大畫面中央密碼卡上指定的十進位目標數字。' },
+          { icon: '2', text: '動手翻轉卡牌：點按左側 5 張倍增排組卡牌（16, 8, 4, 2, 1）。' },
+          { icon: '3', text: '二進位開關設定：正面為 1（開啟），代表該數值計入加總；背面為 0（關閉 / 數值不計）。' },
+          { icon: '4', text: '完美契合：當卡牌啟動的數值總和與目標完全一致，即成功解鎖！時間 1 分鐘奪取最高分。' }
+        ]
+      );
+    }
+
+    // ==================== SORTING MODULE ACTIONS ====================
+    function generateWeights() {
+      const values = [1, 2, 3, 4, 5].sort(() => Math.random() - 0.5);
+      
+      sortingState.weights = SORTING_SYMBOLS.map((symbol, idx) => ({
+        id: `w-${idx}`,
+        symbol,
+        actualWeight: values[idx],
+        color: SORTING_COLORS[idx]
+      }));
+
+      sortingState.leftPan = null;
+      sortingState.rightPan = null;
+      sortingState.scaleAngle = 0;
+      sortingState.logs = [];
+      sortingState.answerSlots = Array(5).fill(null);
+      sortingState.gameFeedback = { status: 'IDLE', msg: '天秤已歸零。砝碼拼配完畢。拖拽或置放開始秤重排序吧！' };
+      
+      render();
+    }
+
+    function handleWeightClick(id) {
+      const item = sortingState.weights.find(w => w.id === id);
+      if (!item) return;
+
+      const isOnScale = sortingState.leftPan?.id === item.id || sortingState.rightPan?.id === item.id;
+      const isPlaced = sortingState.answerSlots.some(s => s?.id === item.id);
+      if (isOnScale || isPlaced) return;
+
+      if (!sortingState.leftPan) {
+        sortingState.leftPan = item;
+      } else if (!sortingState.rightPan) {
+        sortingState.rightPan = item;
+      } else {
+        sortingState.gameFeedback.msg = '秤盤已滿！請點擊天秤盤中的砝碼移除。';
+        render();
+        return;
+      }
+
+      evaluateBalanceScale();
+    }
+
+    function removeFromPan(side) {
+      if (side === 'LEFT') sortingState.leftPan = null;
+      if (side === 'RIGHT') sortingState.rightPan = null;
+      evaluateBalanceScale();
+    }
+
+    function evaluateBalanceScale() {
+      const left = sortingState.leftPan;
+      const right = sortingState.rightPan;
+
+      if (left && right) {
+        if (left.actualWeight > right.actualWeight) {
+          sortingState.scaleAngle = -12;
+          recordChalkLog(`砝碼 ${left.symbol} ＞ 砝碼 ${right.symbol} (重)`);
+        } else if (left.actualWeight < right.actualWeight) {
+          sortingState.scaleAngle = 12;
+          recordChalkLog(`砝碼 ${left.symbol} ＜ 砝碼 ${right.symbol} (輕)`);
+        } else {
+          sortingState.scaleAngle = 0;
+          recordChalkLog(`砝碼 ${left.symbol} ＝ 砝碼 ${right.symbol}`);
+        }
+      } else if (left) {
+        sortingState.scaleAngle = -12;
+      } else if (right) {
+        sortingState.scaleAngle = 12;
+      } else {
+        sortingState.scaleAngle = 0;
+      }
+
+      render();
+    }
+
+    function recordChalkLog(line) {
+      if (!sortingState.logs.includes(line)) {
+        sortingState.logs.unshift(line);
+        sortingState.gameFeedback.msg = `秤重完畢！黑板記錄：${line}`;
+      }
+    }
+
+    function placeSelectedWeightInSlot(wId, slotIdx) {
+      if (!wId) return;
+      const item = sortingState.weights.find(w => w.id === wId);
+      if (!item) return;
+
+      // Remove from any previous slot
+      const existing = sortingState.answerSlots.findIndex(s => s?.id === item.id);
+      if (existing !== -1) sortingState.answerSlots[existing] = null;
+
+      // Put in slot
+      sortingState.answerSlots[slotIdx] = item;
+
+      // Remove from pans
+      if (sortingState.leftPan?.id === item.id) sortingState.leftPan = null;
+      if (sortingState.rightPan?.id === item.id) sortingState.rightPan = null;
+      
+      evaluateBalanceScale();
+    }
+
+    function removeWeightFromAnswerSlot(idx) {
+      sortingState.answerSlots[idx] = null;
+      render();
+    }
+
+    function clearAnswerSlots() {
+      sortingState.answerSlots = Array(5).fill(null);
+      render();
+    }
+
+    function submitSortingAnswer() {
+      const incomplete = sortingState.answerSlots.some(s => s === null);
+      if (incomplete) {
+        sortingState.gameFeedback.msg = '請將所有 5 個砝碼填寫進底層排序底座中！';
+        render();
+        return;
+      }
+
+      sortingState.attempts++;
+      
+      // Check lightest left to heaviest right
+      let isCorrect = true;
+      for (let i = 0; i < 4; i++) {
+        if (sortingState.answerSlots[i].actualWeight > sortingState.answerSlots[i+1].actualWeight) {
+          isCorrect = false;
+          break;
+        }
+      }
+
+      if (isCorrect) {
+        sortingState.score += 10;
+        sortingState.gameFeedback.msg = '驚人的推理邏輯！完美排序解鎖成功！砝碼塔金能釋放！(+10分)';
+        
+        // Persist callback subscores
+        saveProfileSubscores('SORTING', 10, `用 ${sortingState.attempts} 次秤重配比順利排卡`);
+        
+        render();
+
+        setTimeout(() => {
+          generateWeights();
+        }, 1800);
+      } else {
+        sortingState.gameFeedback.msg = '排序不對喔！請參考黑板秤重相對紀錄，或查閱算法規則再試一次。';
+        render();
+      }
+    }
+
+    function toggleRecipeSide(side) {
+      sortingState.recipeSide = side;
+      render();
+    }
+
+    // Clear
+    function clearSchoolroomChalklogs() {
+      sortingState.logs = [];
+      render();
+    }
+
+    function triggerSortingInstructions() {
+      showModal(
+        '演算法智慧模組',
+        '【天秤與幾何排序塔】 (Balance-Scale Sorting Tower)',
+        '本桌遊將傳統天秤與結構化排序演算法（Bubble Sort, Insertion Sort）深度融合。您無法直接得知每個精美砝碼的精確重量，只能透過兩兩天秤秤重比對，寫成科學記錄，探推極致完美的遞增排序！',
+        [
+          { icon: '⚖️', text: '置入天秤：點按上方 5 個幾何砝碼，將其置入左右天秤盤。' },
+          { icon: '📝', text: '記錄黑板：天秤會即刻根據重量傾斜，並在黑板記錄（例如 ✦ ＞ ❖）。' },
+          { icon: '📜', text: '研讀配方：查閱並翻動右側「氣泡排序/插入排序」算法指引。' },
+          { icon: '🧱', text: '排序答題：點點按將砝碼以「最輕(左)到最重(右)」順序排列送出解密！' }
+        ]
+      );
+    }
+
+    // ==================== GRID GAME MODULE ACTIONS ====================
+    function resetGridLevel() {
+      if (gridState.gameTimerRef) clearInterval(gridState.gameTimerRef);
+
+      const cells = [];
+      for (let r = 0; r < GRID_SIZE; r++) {
+        for (let c = 0; c < GRID_SIZE; c++) {
+          cells.push({ x: c, y: r, type: 'EMPTY' });
+        }
+      }
+
+      // Robot start bottom left (0, 5)
+      const startX = 0;
+      const startY = GRID_SIZE - 1;
+      const idxStart = startY * GRID_SIZE + startX;
+      cells[idxStart].type = 'START';
+
+      gridState.robot = { x: startX, y: startY, dir: 'RIGHT' };
+      gridState.initialRobot = { x: startX, y: startY, dir: 'RIGHT' };
+
+      // Shuffle other coordinates is valid
+      const otherIndices = Array.from({ length: GRID_SIZE * GRID_SIZE }, (_, i) => i).filter(i => i !== idxStart);
+      otherIndices.sort(() => Math.random() - 0.5);
+
+      const starIdx = otherIndices[0];
+      cells[starIdx].type = 'STAR';
+
+      for (let i = 1; i <= 4; i++) {
+        cells[otherIndices[i]].type = 'ROCK';
+      }
+
+      gridState.grid = cells;
+      gridState.library = COMMAND_LIBRARY.map((item, idx) => ({
+        ...item,
+        id: `lib-cmd-${idx}`,
+        isFlipped: false
+      }));
+      gridState.commandSequence = [];
+      gridState.isExecuting = false;
+      gridState.currentStepIdx = null;
+      gridState.movesCount = 0;
+      gridState.exStatus = 'IDLE';
+      gridState.executionLog = '全新指令地盤建立！請配置指令：';
+
+      // Start Clock seconds count
+      gridState.seconds = 0;
+      gridState.gameTimerRef = setInterval(() => {
+        gridState.seconds++;
+        render();
+      }, 1000);
+
+      render();
+    }
+
+    function flipLibraryCard(idx) {
+      gridState.library[idx].isFlipped = !gridState.library[idx].isFlipped;
+      render();
+    }
+
+    function flipSequenceCard(id) {
+      gridState.commandSequence = gridState.commandSequence.map(c => c.id === id ? { ...c, isFlipped: !c.isFlipped } : c);
+      render();
+    }
+
+    function appendCommandToSequence(type) {
+      const item = COMMAND_LIBRARY.find(c => c.type === type);
+      if (!item) return;
+
+      const newCmd = {
+        ...item,
+        id: `seq-${Date.now()}-${Math.random().toString(36).substr(2,3)}`,
+        isFlipped: false
+      };
+
+      gridState.commandSequence.push(newCmd);
+      render();
+    }
+
+    function removeSequenceCommand(id) {
+      gridState.commandSequence = gridState.commandSequence.filter(c => c.id !== id);
+      render();
+    }
+
+    function clearCommandSequence() {
+      gridState.commandSequence = [];
+      render();
+    }
+
+    function resetCommandSequenceRun() {
+      gridState.isExecuting = false;
+      gridState.currentStepIdx = null;
+      gridState.robot = { ...gridState.initialRobot };
+      gridState.exStatus = 'IDLE';
+      gridState.executionLog = '重置完畢。可以調整序列，重新點擊執行！';
+      render();
+    }
+
+    async function runCommandSequence() {
+      if (gridState.commandSequence.length === 0) return;
+      
+      gridState.isExecuting = true;
+      gridState.exStatus = 'RUNNING';
+      gridState.robot = { ...gridState.initialRobot };
+      gridState.currentStepIdx = 0;
+      gridState.executionLog = '正在連結漫遊車... C++ 程式編譯完畢，指令灌注中...';
+      render();
+
+      for (let i = 0; i < gridState.commandSequence.length; i++) {
+        if (!gridState.isExecuting) break;
+
+        gridState.currentStepIdx = i;
+        const cmd = gridState.commandSequence[i];
+        
+        await delay(900);
+        executeSingleCommand(cmd);
+        render();
+
+        if (gridState.exStatus !== 'RUNNING') {
+          break; // Crashed or success
+        }
+      }
+
+      if (gridState.exStatus === 'RUNNING') {
+        gridState.exStatus = 'FAILED_END';
+        gridState.executionLog = '序列卡片全部執行。漫遊車宣告電力耗盡，但還沒拿到星星！請調整排列重試。';
+        gridState.isExecuting = false;
+        render();
+      }
+    }
+
+    function executeSingleCommand(cmd) {
+      const robot = gridState.robot;
+      
+      if (cmd.type === 'FORWARD') {
+        moveRobotForward();
+      } else if (cmd.type === 'TURN_L') {
+        rotateRobot('LEFT');
+      } else if (cmd.type === 'TURN_R') {
+        rotateRobot('RIGHT');
+      } else if (cmd.type === 'IF_OBSTACLE') {
+        // Evaluate next wall path of robot
+        if (checkObstacleAhead()) {
+          rotateRobot('RIGHT');
+          gridState.executionLog = '檢測到障礙物！ C++ If-Else 指令觸發右轉。';
+        } else {
+          gridState.executionLog = '前方無阻。If-Else 未被啟動。';
+        }
+      } else if (cmd.type === 'REPEAT_3') {
+        // Move Forward 3 times
+        gridState.executionLog = 'C++ for 迴圈啟動！重複 3 次前進一步：';
+        for (let idx = 0; idx < 3; idx++) {
+          moveRobotForward();
+          if (gridState.exStatus !== 'RUNNING') break;
+        }
+      }
+    }
+
+    function moveRobotForward() {
+      const robot = gridState.robot;
+      let targetX = robot.x;
+      let targetY = robot.y;
+
+      if (robot.dir === 'UP') targetY--;
+      else if (robot.dir === 'DOWN') targetY++;
+      else if (robot.dir === 'LEFT') targetX--;
+      else if (robot.dir === 'RIGHT') targetX++;
+
+      // Check Boundary
+      if (targetX < 0 || targetX >= GRID_SIZE || targetY < 0 || targetY >= GRID_SIZE) {
+        gridState.exStatus = 'CRASH_BORDER';
+        gridState.executionLog = '💥 移動邊界越軌！機器人自毀警報，請調整控制迴圈！';
+        gridState.isExecuting = false;
+        return;
+      }
+
+      // Check Obstacle
+      const cell = gridState.grid.find(c => c.x === targetX && c.y === targetY);
+      if (cell && cell.type === 'ROCK') {
+        gridState.exStatus = 'CRASH_ROCK';
+        gridState.executionLog = '💥 漫遊車撞擊到隕石碎屑！程式中斷，請清除阻礙。';
+        gridState.isExecuting = false;
+        return;
+      }
+
+      // Move Success
+      gridState.robot.x = targetX;
+      gridState.robot.y = targetY;
+      gridState.movesCount++;
+      gridState.executionLog = `前進一步 ➔ 自標 [${targetX}, ${targetY}]`;
+
+      // Check star success match
+      if (cell && cell.type === 'STAR') {
+        gridState.exStatus = 'SUCCESS';
+        gridState.score += 50;
+        gridState.executionLog = '🏆 奇蹟通關！程式精準控制機器人取得金色星星！(+55 pt)';
+        gridState.isExecuting = false;
+
+        // Persist records
+        saveProfileSubscores('GRID', 50, `花費 ${gridState.seconds}秒，${gridState.movesCount}步精準奪星`);
+      }
+    }
+
+    function rotateRobot(side) {
+      const dirs = ['UP', 'RIGHT', 'DOWN', 'LEFT'];
+      let currentIdx = dirs.indexOf(gridState.robot.dir);
+
+      if (side === 'LEFT') {
+        currentIdx = (currentIdx + 3) % 4; // rotate anti 90
+      } else {
+        currentIdx = (currentIdx + 1) % 4; // rotate clockwise 90
+      }
+
+      gridState.robot.dir = dirs[currentIdx];
+      gridState.executionLog = `成功旋轉 ➔ 面向 ${gridState.robot.dir}`;
+    }
+
+    function checkObstacleAhead() {
+      const robot = gridState.robot;
+      let nextX = robot.x;
+      let nextY = robot.y;
+
+      if (robot.dir === 'UP') nextY--;
+      else if (robot.dir === 'DOWN') nextY++;
+      else if (robot.dir === 'LEFT') nextX--;
+      else if (robot.dir === 'RIGHT') nextX++;
+
+      // Border wall
+      if (nextX < 0 || nextX >= GRID_SIZE || nextY < 0 || nextY >= GRID_SIZE) return true;
+
+      // Obstacles Rock
+      const cell = gridState.grid.find(c => c.x === nextX && c.y === nextY);
+      return cell && cell.type === 'ROCK';
+    }
+
+    function delay(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    function triggerGridInstructions() {
+      showModal(
+        '空間決策智慧模組',
+        '【大地指令程式設計】 (Grid Map Coding Rover)',
+        '在格子地墊組合物理控制指令卡。卡片背面印有實體的 C++ 語法描述，支持 if() 條件式判斷、for() 計數迴圈。引導漫遊車在充滿外太空隕石的異星上，成功折返並掠奪金星！',
+        [
+          { icon: '🗺️', text: '定位漫遊：小機器人 起點落在地墊左下角，目標是獲取地墊中的金色星星。' },
+          { icon: '🧱', text: '指令拼裝：從右側「指令卡庫」點選卡牌，拖拽或置入中央程式盤堆集。' },
+          { icon: '🔄', text: '背面對照：隨時點擊指令卡翻轉看背後的 C++ 寫法，深植思維。' },
+          { icon: '🚀', text: '點擊模擬：點擊「執行序列」，機器人會自動一格一格完成行走與避障探索！' }
+        ]
+      );
+    }
+
+    // ==================== COMMON LAYOVER DIALOGS ====================
+    function showModal(category, name, desc, steps) {
+      document.getElementById('modal-category').innerText = category;
+      document.getElementById('modal-game-name').innerText = name;
+      document.getElementById('modal-description').innerText = desc;
+
+      const container = document.getElementById('modal-steps');
+      container.innerHTML = steps.map(step => `
+        <div class="flex items-start gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800">
+          <span class="w-5 h-5 rounded-full bg-cyan-950 text-cyan-405 text-cyan-400 font-bold border border-cyan-900 flex items-center justify-center text-xs shrink-0 mt-0.5">${step.icon}</span>
+          <p class="text-[11px] text-slate-300 leading-relaxed font-sans">${step.text}</p>
+        </div>
+      `).join('');
+
+      document.getElementById('instruction-modal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('instruction-modal').classList.add('hidden');
+    }
+  </script>
+</body>
+</html>
